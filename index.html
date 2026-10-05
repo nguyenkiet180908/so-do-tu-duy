@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ tư duy 5 năm – Nguyễn Gia Kiệt</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --paper: #fbf8f1;
+            --paper-dot: #e4ddcf;
+            --ink: #2b2a28;
+            --ink-soft: #5b5750;
+            --terracotta: #cf8a6c;
+            --highlight: #ffe46b;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+        }
+
+        #viewport {
+            position: absolute;
+            inset: 0;
+            overflow: auto;
+            cursor: grab;
+            background-color: var(--paper);
+            background-image: radial-gradient(var(--paper-dot) 1.3px, transparent 1.3px);
+            background-size: 24px 24px;
+        }
+        #viewport.panning { cursor: grabbing; user-select: none; }
+
+        #sizer { position: relative; margin: 0 auto; }
+
+        #sheet {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: max-content;
+            padding: 48px 64px 80px;
+            transform-origin: 0 0;
+        }
+
+        #branches {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .sheet-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 80px;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .name-card {
+            background: #fff;
+            border: 4px solid var(--ink);
+            border-radius: 14px 10px 16px 9px;
+            padding: 9px;
+            box-shadow: 14px 12px 0 var(--terracotta);
+            transform: rotate(-1.2deg);
+        }
+        .name-card-inner {
+            background: var(--terracotta);
+            border: 3px solid var(--ink);
+            border-radius: 6px 9px 5px 8px;
+            padding: 14px 30px 18px 20px;
+            font-size: 28px;
+            line-height: 1.35;
+        }
+        .name-card-inner b { font-weight: normal; }
+
+        .sheet-title {
+            text-align: right;
+            font-size: 22px;
+            color: var(--ink-soft);
+            line-height: 1.3;
+            padding-top: 8px;
+        }
+        .sheet-title strong {
+            display: block;
+            font-weight: normal;
+            font-size: 34px;
+            color: var(--ink);
+        }
+
+        .map {
+            display: flex;
+            align-items: center;
+            gap: 140px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .side {
+            display: flex;
+            flex-direction: column;
+            gap: 56px;
+        }
+
+        .branch {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 64px;
+        }
+        .side.right .branch { flex-direction: row-reverse; }
+        .branch.collapsed:not(.peek) .cats { display: none; }
+
+        .cats {
+            display: flex;
+            flex-direction: column;
+            gap: 26px;
+        }
+
+        .cat-row {
+            display: flex;
+            align-items: center;
+            gap: 52px;
+        }
+        .side.right .cat-row { flex-direction: row-reverse; }
+
+        .leaves {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 330px;
+        }
+        .side.left .leaves { align-items: flex-end; text-align: right; }
+        .side.right .leaves { align-items: flex-start; text-align: left; }
+
+        .year {
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 0 8px 5px;
+            border-bottom: 5px solid currentColor;
+            border-radius: 0 0 3px 3px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .side.right .year { flex-direction: row-reverse; }
+        .side.left .year-text { text-align: right; }
+        .year:hover .year-name { text-decoration: underline wavy; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+
+        .doodle {
+            width: 50px;
+            height: 50px;
+            flex-shrink: 0;
+            margin-bottom: 2px;
+        }
+        .doodle * {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .doodle .tint { fill: currentColor; fill-opacity: 0.16; }
+
+        .year-name { font-size: 34px; line-height: 1; }
+        .year-period {
+            font-size: 18px;
+            color: var(--ink-soft);
+            margin-left: 8px;
+        }
+        .year-sub {
+            display: block;
+            font-size: 17px;
+            color: var(--ink);
+            margin-top: 4px;
+        }
+        .year-progress {
+            font-size: 14px;
+            opacity: 0.75;
+            margin-left: 6px;
+        }
+        .side.left .year-progress { margin-left: 0; margin-right: 6px; }
+
+        .knob {
+            position: absolute;
+            bottom: -13px;
+            width: 21px;
+            height: 21px;
+            border: 2.5px solid currentColor;
+            border-radius: 50%;
+            background: var(--paper);
+            font-size: 18px;
+            line-height: 14px;
+            text-align: center;
+        }
+        .side.left .knob { left: -12px; }
+        .side.right .knob { right: -12px; }
+
+        .cat {
+            font-size: 22px;
+            padding: 0 6px 2px;
+            border-bottom: 3px solid currentColor;
+            white-space: nowrap;
+        }
+
+        .leaf {
+            font-size: 16.5px;
+            line-height: 1.3;
+            color: var(--ink);
+            padding: 1px 5px 2px;
+            border-bottom: 2px solid;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .leaf:hover .leaf-text { background: rgba(0, 0, 0, 0.04); border-radius: 4px; }
+        .leaf b { font-weight: normal; }
+        .leaf.done .leaf-text {
+            text-decoration: line-through;
+            text-decoration-thickness: 1.5px;
+            opacity: 0.5;
+        }
+        .leaf.done::after { content: " ✓"; font-size: 19px; }
+        .leaf.match .leaf-text {
+            background: linear-gradient(transparent 45%, var(--highlight) 45%, var(--highlight) 92%, transparent 92%);
+        }
+        .leaf.dim { opacity: 0.22; }
+
+        .hub {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 26px 38px 26px;
+            background: #fff6d8;
+            border: 3.5px solid var(--ink);
+            border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px;
+            transform: rotate(-1deg);
+            box-shadow: 7px 8px 0 rgba(43, 42, 40, 0.12);
+        }
+        .hub .doodle { width: 58px; height: 58px; color: var(--ink); }
+        .hub .doodle .tint { fill: #ffd84d; fill-opacity: 0.7; }
+        .hub-title { font-size: 36px; line-height: 1.05; }
+        .hub-sub { font-size: 24px; color: var(--ink-soft); margin-top: 6px; }
+        .hub-period { font-size: 18px; color: var(--ink-soft); }
+        .hub-goal {
+            margin-top: 10px;
+            font-size: 16px;
+            color: var(--ink-soft);
+            max-width: 240px;
+            line-height: 1.3;
+        }
+
+        body.intro .hub,
+        body.intro .year,
+        body.intro .cat,
+        body.intro .leaf { opacity: 0; }
+
+        .pop { animation: pop 0.45s ease-out both; }
+        .hub.pop { animation-name: hubPop; animation-duration: 0.6s; }
+        .grow-l { animation: growL 0.55s ease-out both; }
+        .grow-r { animation: growR 0.55s ease-out both; }
+
+        @keyframes pop {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: none; }
+        }
+        @keyframes hubPop {
+            from { opacity: 0; transform: rotate(-1deg) scale(0.85); }
+            to { opacity: 1; transform: rotate(-1deg) scale(1); }
+        }
+        @keyframes growL {
+            from { clip-path: inset(0 0 0 100%); }
+            to { clip-path: inset(0 0 0 0); }
+        }
+        @keyframes growR {
+            from { clip-path: inset(0 100% 0 0); }
+            to { clip-path: inset(0 0 0 0); }
+        }
+
+        .toolbar {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 8px;
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: 12px 8px 13px 9px;
+            box-shadow: 4px 4px 0 rgba(43, 42, 40, 0.15);
+            font-size: 17px;
+        }
+        .toolbar button {
+            font: inherit;
+            background: none;
+            border: none;
+            color: var(--ink);
+            min-width: 32px;
+            height: 32px;
+            padding: 0 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .toolbar button:hover { background: #f1ece1; }
+        .toolbar .sep {
+            width: 1.5px;
+            height: 22px;
+            background: #d8d1c3;
+            margin: 0 4px;
+        }
+        .toolbar input {
+            font: inherit;
+            width: 170px;
+            border: none;
+            border-bottom: 2px dashed #c9c1b1;
+            background: transparent;
+            outline: none;
+            padding: 2px 4px;
+            color: var(--ink);
+        }
+        .toolbar input:focus { border-bottom-color: var(--ink); }
+        #zoom-text { min-width: 46px; text-align: center; color: var(--ink-soft); }
+        #progress-text { color: var(--ink-soft); padding: 0 4px; white-space: nowrap; }
+
+        .tip {
+            position: fixed;
+            left: 18px;
+            bottom: 20px;
+            z-index: 20;
+            font-size: 16px;
+            color: #8c857a;
+        }
+
+        @media (max-width: 1100px) {
+            .tip { display: none; }
+        }
+        @media (max-width: 900px) {
+            .toolbar { left: 12px; right: 12px; bottom: 12px; flex-wrap: wrap; justify-content: center; }
+            .toolbar input { width: 120px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pop, .grow-l, .grow-r { animation: none !important; }
+        }
+
+        @media print {
+            .toolbar, .tip { display: none !important; }
+            html, body { overflow: visible; height: auto; }
+            #viewport { position: static; overflow: visible; background-image: none; }
+            #sheet { transform: scale(0.55) !important; }
+            .knob { display: none; }
+        }
+    </style>
+</head>
+<body class="intro">
+
+    <div id="viewport">
+        <div id="sizer">
+            <div id="sheet">
+                <svg id="branches"></svg>
+
+                <div class="sheet-top">
+                    <div class="name-card">
+                        <div class="name-card-inner">
+                            <div>Tên: <b data-student="name"></b></div>
+                            <div>MSSV: <b data-student="id"></b></div>
+                            <div>Lớp: <b data-student="className"></b></div>
+                        </div>
+                    </div>
+                    <div class="sheet-title">
+                        <strong>Sơ đồ tư duy</strong>
+                        Hoạch định tương lai 5 năm<br>
+                        <span id="cohort-text"></span>
+                    </div>
+                </div>
+
+                <div class="map">
+                    <div class="side left" id="side-left"></div>
+
+                    <div class="hub" id="hub">
+                        <svg class="doodle" viewBox="0 0 48 48">
+                            <path class="tint" d="M24 6.5 C15.5 6 10.2 12.6 11 19.8 C11.7 25.6 17 28.2 18.2 33 L29.9 33.2 C31 28.1 36.3 25.8 36.9 19.6 C37.6 12.8 32.4 6.8 24 6.5 Z"/>
+                            <path d="M19.2 37.8 C22.4 37.4 26 37.6 28.9 37.9"/>
+                            <path d="M20.4 42 C23 41.6 25.4 41.8 27.6 42.1"/>
+                            <path d="M21 28 C21.6 24.4 23 22 24 21.2 C25.2 22.2 26.6 24.6 27 28"/>
+                            <path d="M5.5 10 L9.2 12.4"/>
+                            <path d="M42.6 9.8 L38.8 12.3"/>
+                            <path d="M3.8 21.6 L8 21.8"/>
+                            <path d="M44.2 21.4 L40 21.7"/>
+                        </svg>
+                        <div class="hub-title">Hoạch định<br>tương lai</div>
+                        <div class="hub-sub">5 năm cá nhân</div>
+                        <div class="hub-period" id="hub-period"></div>
+                        <div class="hub-goal">Kỹ sư IoT / Embedded Firmware</div>
+                    </div>
+
+                    <div class="side right" id="side-right"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tip">Bấm vào một ý để đánh dấu đã đạt · bấm vào năm để thu gọn · kéo nền để di chuyển · Ctrl + cuộn để phóng to</div>
+
+    <div class="toolbar">
+        <i class="fa-solid fa-magnifying-glass" style="color:#8c857a;margin:0 4px 0 6px"></i>
+        <input id="search-input" type="text" placeholder="tìm: TOEIC, GPA, C/C++…" oninput="handleSearch()">
+        <span class="sep"></span>
+        <button onclick="zoomBy(-0.1)" title="Thu nhỏ"><i class="fa-solid fa-minus"></i></button>
+        <span id="zoom-text">100%</span>
+        <button onclick="zoomBy(0.1)" title="Phóng to"><i class="fa-solid fa-plus"></i></button>
+        <button onclick="fitToScreen()" title="Vừa màn hình"><i class="fa-solid fa-expand"></i></button>
+        <span class="sep"></span>
+        <button id="collapse-all-btn" onclick="toggleAllBranches()">Thu gọn hết</button>
+        <button onclick="replayIntro()" title="Vẽ lại"><i class="fa-solid fa-pen-nib"></i></button>
+        <span class="sep"></span>
+        <span id="progress-text">Đã đạt 0/0</span>
+        <button onclick="resetAllProgress()" title="Xóa đánh dấu"><i class="fa-solid fa-rotate-left"></i></button>
+        <button onclick="window.print()" title="In"><i class="fa-solid fa-print"></i></button>
+    </div>
+
+    <script>
+        const STUDENT = {
+            name: "Nguyễn Gia Kiệt",
+            id: "26707921",
+            className: "DHDTVT22E"
+        };
+
+        const START_YEAR = 2026;
+
+        const DOODLES = {
+            seedling: `
+                <path d="M10.5 42.2 C17 41.2 29.5 42.8 37.8 41.8"/>
+                <path d="M24.2 42 C23.6 35.5 24.4 29 24 21.5"/>
+                <path class="tint" d="M24 27 C16.5 27.4 10.8 21.6 10.6 13.4 C18.6 13.2 23.8 18.6 24 27 Z"/>
+                <path class="tint" d="M24.1 22.4 C23.6 14.2 29.6 7.6 38.4 7.8 C38.6 16.4 32.6 22.2 24.1 22.4 Z"/>
+                <path d="M15.2 17.6 C18.4 19.8 21 22.4 23.4 25.6"/>`,
+            book: `
+                <path class="tint" d="M24 13.4 C18.2 9.2 10.4 9 5.8 11.2 L6.2 37.4 C10.6 35.2 18.4 35.4 24 39.2 C29.8 35.2 37.6 35 42 37.2 L42.4 11 C37.8 8.8 30 9.4 24 13.4 Z"/>
+                <path d="M24 13.6 C24.4 22 23.8 30.6 24 39"/>
+                <path d="M10.6 17.4 C14 16.4 17.2 16.6 20.2 17.8"/>
+                <path d="M10.8 23.2 C14.2 22.2 17.4 22.4 20.4 23.6"/>
+                <path d="M10.6 29 C13.8 28.2 16.8 28.4 19.6 29.4"/>
+                <path d="M27.8 17.8 C30.8 16.6 34 16.4 37.4 17.4"/>
+                <path d="M27.6 23.6 C30.6 22.4 33.8 22.2 37.2 23.2"/>`,
+            chip: `
+                <path class="tint" d="M14.2 13.8 C21 14.4 27.4 13.6 34.2 14.2 C33.6 21 34.4 27.4 33.8 34.2 C27 33.6 20.6 34.4 13.8 33.8 C14.4 27 13.6 20.6 14.2 13.8 Z"/>
+                <path d="M20.2 20 C23 20.4 25.4 19.8 28 20.2 C27.6 23 28.2 25.4 27.8 28 C25 27.6 22.6 28.2 20 27.8 C20.4 25 19.8 22.6 20.2 20 Z"/>
+                <path d="M19 13.8 L19.2 7.6 M24 14 L23.8 7.4 M29 13.8 L29.2 7.8"/>
+                <path d="M19 34 L18.8 40.4 M24 34 L24.2 40.6 M29 34 L28.8 40.2"/>
+                <path d="M14 19 L7.6 19.2 M14 24 L7.4 23.8 M14 29 L7.8 29.2"/>
+                <path d="M34 19 L40.4 18.8 M34 24 L40.6 24.2 M34 29 L40.2 28.8"/>`,
+            gradcap: `
+                <path class="tint" d="M3.8 18.4 L24.2 8.8 L44.2 18 L23.8 27.6 Z"/>
+                <path d="M11.8 22.2 C12.2 25.6 11.6 29 12 32.2 C18.4 37.4 30 37.2 36.2 32 C35.8 28.8 36.4 25.4 36 22"/>
+                <path d="M44 18.2 C44.4 22.2 43.8 26.2 44.2 30.2"/>
+                <path d="M41.8 30.4 C42.4 33.4 45.6 33.6 46.4 30.2 Z"/>`,
+            rocket: `
+                <path class="tint" d="M24 4.8 C32.4 11.6 34.6 22 31.2 33.2 L16.8 33 C13.6 22 15.8 11.8 24 4.8 Z"/>
+                <path d="M24 12.2 C26.6 12.2 28.2 14 28.2 16.4 C28.2 18.8 26.4 20.6 24 20.6 C21.6 20.6 19.8 18.8 19.8 16.4 C19.8 14 21.6 12.2 24 12.2 Z"/>
+                <path d="M16.6 25.6 C12.6 28.4 10.2 31 9.8 34.6 L16.8 33"/>
+                <path d="M31.4 25.6 C35.4 28.4 37.8 31 38.2 34.6 L31.2 33"/>
+                <path d="M19.8 36.6 C20.8 40.4 22.6 42.8 24 44.2 C25.4 42.8 27.2 40.4 28.2 36.6"/>`,
+            chart: `
+                <path d="M7.8 5.8 C8.2 17 7.6 29 8 40.2 C19.4 39.8 31 40.4 42.4 40"/>
+                <path class="tint" d="M12.6 40 L12.8 33 L17.6 33.2 L17.4 40 Z"/>
+                <path class="tint" d="M21.6 40 L21.8 27.6 L26.6 27.8 L26.4 40 Z"/>
+                <path class="tint" d="M30.6 40 L30.8 22 L35.6 22.2 L35.4 40 Z"/>
+                <path d="M11.8 27.8 C16.6 23.4 20.6 21 25.2 19.4 C30 17.6 34.2 13.8 38.6 9"/>
+                <path d="M32.8 8.6 L38.8 8.8 L38.6 14.8"/>`
+        };
+
+        const MIND_DATA = [
+            {
+                id: "y1",
+                year: "Năm 1",
+                offset: 0,
+                subtitle: "Xây nền tảng & tư duy lập trình",
+                side: "left",
+                color: "#2f9e6e",
+                doodle: "seedling",
+                goals: [
+                    "Hoàn thành 100% môn đại cương & cơ sở: Toán cao cấp, C/C++.",
+                    "Đạt GPA ≥ 3.2/4.0.",
+                    "Làm quen phương pháp học Đại học, rèn tư duy logic & lập trình.",
+                    "Nắm vững kiến thức cơ bản về C/C++.",
+                    "Bắt đầu học Tiếng Anh kỹ thuật & TOEIC.",
+                    "Duy trì 1–2 giờ/ngày tự học và luyện code."
+                ],
+                smart: [
+                    { label: "S", text: "Xây nền tảng học tập và lập trình C/C++." },
+                    { label: "M", text: "GPA ≥ 3.2; hoàn thành 100% môn; bắt đầu TOEIC." },
+                    { label: "A", text: "Tự học và luyện code 1–2 giờ/ngày." },
+                    { label: "R", text: "Chuẩn bị nền tảng cho chuyên ngành từ Năm 2." },
+                    { label: "T", text: "Hoàn thành cuối Năm 1." }
+                ]
+            },
+            {
+                id: "y2",
+                year: "Năm 2",
+                offset: 1,
+                subtitle: "Nâng cao kiến thức",
+                side: "left",
+                color: "#8a5cc7",
+                doodle: "book",
+                goals: [
+                    "Nâng cao Tiếng Anh 4 kỹ năng, hướng đến TOEIC.",
+                    "Đạt GPA > 3.2/4.0.",
+                    "Hoàn thành tốt các môn chuyên ngành cơ bản.",
+                    "Tham gia ít nhất 1 CLB/Lab kỹ thuật tại Khoa Công nghệ Điện tử IUH.",
+                    "Làm thêm phù hợp để tích lũy kinh nghiệm & tiết kiệm.",
+                    "Rèn làm việc nhóm, giao tiếp & giải quyết vấn đề."
+                ],
+                smart: [
+                    { label: "S", text: "Nâng kiến thức chuyên ngành và kỹ năng mềm." },
+                    { label: "M", text: "GPA > 3.2; ≥1 CLB/Lab; duy trì học TOEIC." },
+                    { label: "A", text: "Học nhóm, hỏi giảng viên, tích cực thực hành." },
+                    { label: "R", text: "Tăng năng lực, kinh nghiệm và giảm áp lực tài chính." },
+                    { label: "T", text: "Hoàn thành cuối Năm 2." }
+                ]
+            },
+            {
+                id: "y3",
+                year: "Năm 3",
+                offset: 2,
+                subtitle: "Thực hành & tích lũy kinh nghiệm",
+                side: "left",
+                color: "#1b93a8",
+                doodle: "chip",
+                goals: [
+                    "Chuẩn bị TOEIC đầu ra & Tiếng Anh kỹ thuật.",
+                    "Củng cố chuyên ngành IoT / Embedded.",
+                    "Tham gia dự án thực tế, CLB hoặc Lab.",
+                    "Tìm hiểu công ty công nghệ & vị trí tuyển dụng.",
+                    "Tìm cơ hội làm thêm, thực tập sớm hoặc dự án thực tế.",
+                    "Đạt GPA > 3.2/4.0.",
+                    "Bắt đầu xây dựng CV & hồ sơ cá nhân."
+                ],
+                smart: [
+                    { label: "S", text: "Xác định định hướng nghề nghiệp IoT / Embedded và có kinh nghiệm thực tế." },
+                    { label: "M", text: "≥1 dự án/hoạt động/công việc; có CV; GPA > 3.2." },
+                    { label: "A", text: "Chủ động tìm cơ hội từ CLB, Lab, giảng viên và tuyển dụng." },
+                    { label: "R", text: "Tạo kinh nghiệm và nền tảng cho thực tập Năm 4." },
+                    { label: "T", text: "Hoàn thành cuối Năm 3." }
+                ]
+            },
+            {
+                id: "y4",
+                year: "Năm 4",
+                offset: 3,
+                subtitle: "Tốt nghiệp & chuẩn bị việc làm",
+                side: "right",
+                color: "#3b6fd6",
+                doodle: "gradcap",
+                goals: [
+                    "Đạt TOEIC LR ≥ 700, SW ≥ 250.",
+                    "Nâng khả năng đọc datasheet & tài liệu kỹ thuật quốc tế.",
+                    "Hoàn thiện CV, hồ sơ & kỹ năng phỏng vấn.",
+                    "Tham gia thực tập tại công ty công nghệ.",
+                    "Hoàn thành khóa luận/đồ án/thực tập tốt nghiệp.",
+                    "Đạt GPA > 3.2/4.0.",
+                    "Mở rộng quan hệ với doanh nghiệp và tìm cơ hội việc làm."
+                ],
+                smart: [
+                    { label: "S", text: "Hoàn thiện chuyên môn, Tiếng Anh và kinh nghiệm thực tập." },
+                    { label: "M", text: "LR ≥ 700; SW ≥ 250; ứng tuyển 5–10 công ty; ≥1 nơi nhận thực tập; hoàn thành đồ án." },
+                    { label: "A", text: "Chủ động chuẩn bị CV, phỏng vấn và thực tập." },
+                    { label: "R", text: "Sẵn sàng bước vào thị trường lao động đúng chuyên ngành." },
+                    { label: "T", text: "Hoàn thành cuối Năm 4." }
+                ]
+            },
+            {
+                id: "y45",
+                year: "Năm 4.5",
+                offset: 4,
+                half: true,
+                subtitle: "Tốt nghiệp & việc làm",
+                side: "right",
+                color: "#d4554f",
+                doodle: "rocket",
+                goals: [
+                    "Hoàn thiện CV & hồ sơ xin việc.",
+                    "Ứng tuyển Kỹ sư IoT / Embedded Firmware Engineer.",
+                    "Tìm công việc đúng chuyên ngành & định hướng cá nhân.",
+                    "Có việc làm ổn định sau tốt nghiệp.",
+                    "Bắt đầu tăng thu nhập & tự chủ tài chính.",
+                    "Tiếp tục học chứng chỉ và kỹ năng chuyên môn."
+                ],
+                smart: [
+                    { label: "S", text: "Có việc chính thức trong lĩnh vực IoT / Embedded Firmware." },
+                    { label: "M", text: "Tốt nghiệp đúng hạn; ứng tuyển ≥10 vị trí; nhận ≥1 offer đúng chuyên ngành." },
+                    { label: "A", text: "Tận dụng kinh nghiệm thực tập, CV và kỹ năng chuyên môn." },
+                    { label: "R", text: "Tạo thu nhập ổn định và bắt đầu sự nghiệp." },
+                    { label: "T", text: "Thực hiện trong giai đoạn 4.5 & ngay sau tốt nghiệp." }
+                ]
+            },
+            {
+                id: "y5",
+                year: "Năm 5",
+                offset: 5,
+                subtitle: "Ổn định & phát triển",
+                side: "right",
+                color: "#dd8a1c",
+                doodle: "chart",
+                goals: [
+                    "Ổn định công việc đúng chuyên ngành.",
+                    "Nâng cao chuyên môn IoT / Embedded Firmware.",
+                    "Tăng thu nhập và tự chủ tài chính.",
+                    "Tích lũy kinh nghiệm qua dự án thực tế.",
+                    "Học thêm chứng chỉ & kỹ năng mới.",
+                    "Xây dựng định hướng nghề nghiệp dài hạn."
+                ],
+                smart: [
+                    { label: "S", text: "Phát triển chuyên môn và sự nghiệp lâu dài trong IoT / Embedded." },
+                    { label: "M", text: "Tăng thu nhập 10–20%/năm; hoàn thành 1–2 chứng chỉ/kỹ năng mới; ≥1 dự án/năm." },
+                    { label: "A", text: "Học và áp dụng Embedded, IoT, Microcontroller, RTOS, giao tiếp phần cứng vào công việc." },
+                    { label: "R", text: "Tăng chuyên môn, thu nhập và cơ hội thăng tiến." },
+                    { label: "T", text: "Thực hiện trong Năm 5 và duy trì các năm tiếp theo." }
+                ]
+            }
+        ];
+
+        const STORAGE_KEY = "mindmap_hierarchical_5year_progress";
+        const COLLAPSE_KEY = "mindmap_5year_collapsed";
+        const MIN_SCALE = 0.35;
+        const MAX_SCALE = 1.5;
+        const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        let completionMap = {};
+        let collapsed = {};
+        let currentScale = 1;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll("[data-student]").forEach(el => {
+                el.textContent = STUDENT[el.dataset.student] || "";
+            });
+            document.getElementById("cohort-text").textContent = `Khóa ${START_YEAR}`;
+            document.getElementById("hub-period").textContent = `${START_YEAR} – ${START_YEAR + 5}`;
+
+            completionMap = readStore(STORAGE_KEY);
+            collapsed = readStore(COLLAPSE_KEY);
+            renderMindmap();
+            setupPanAndZoom();
+
+            const start = () => {
+                syncSizer();
+                fitToScreen();
+                drawBranches({ anim: REDUCED_MOTION ? null : "all" });
+                document.body.classList.remove("intro");
+            };
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(start);
+            else setTimeout(start, 200);
+
+            window.addEventListener("resize", () => { syncSizer(); drawBranches(); });
+        });
+
+        function periodOf(b) {
+            const from = START_YEAR + b.offset;
+            if (b.half) return `HK1 ${from}–${from + 1}`;
+            return `${from} – ${from + 1}`;
+        }
+
+        function readStore(key) {
+            try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; }
+        }
+
+        function writeStore(key, value) {
+            try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+        }
+
+        function toggleLeaf(key) {
+            completionMap[key] = !completionMap[key];
+            const node = document.getElementById(`leaf-${key}`);
+            if (node) node.classList.toggle("done", completionMap[key]);
+            writeStore(STORAGE_KEY, completionMap);
+            updateProgress();
+        }
+
+        function branchKeys(b) {
+            return [
+                ...b.goals.map((_, i) => `${b.id}_g_${i}`),
+                ...b.smart.map((_, i) => `${b.id}_s_${i}`)
+            ];
+        }
+
+        function updateProgress() {
+            let total = 0;
+            let done = 0;
+            MIND_DATA.forEach(b => {
+                const keys = branchKeys(b);
+                const d = keys.filter(k => completionMap[k]).length;
+                total += keys.length;
+                done += d;
+                const el = document.getElementById(`prog-${b.id}`);
+                if (el) el.textContent = `${d}/${keys.length}`;
+            });
+            document.getElementById("progress-text").textContent = `Đã đạt ${done}/${total}`;
+        }
+
+        function resetAllProgress() {
+            if (!confirm("Xóa toàn bộ đánh dấu đã đạt?")) return;
+            completionMap = {};
+            document.querySelectorAll(".leaf.done").forEach(n => n.classList.remove("done"));
+            writeStore(STORAGE_KEY, completionMap);
+            updateProgress();
+        }
+
+        function leafHtml(b, key, inner) {
+            return `<div class="leaf ${completionMap[key] ? "done" : ""}" id="leaf-${key}"
+                         style="border-color:${b.color}" onclick="toggleLeaf('${key}')"><span class="leaf-text">${inner}</span></div>`;
+        }
+
+        function renderMindmap() {
+            const left = document.getElementById("side-left");
+            const right = document.getElementById("side-right");
+            left.innerHTML = "";
+            right.innerHTML = "";
+
+            MIND_DATA.forEach(b => {
+                const goals = b.goals.map((g, i) => leafHtml(b, `${b.id}_g_${i}`, g)).join("");
+                const smart = b.smart.map((s, i) => leafHtml(
+                    b, `${b.id}_s_${i}`, `<b style="color:${b.color}">${s.label}</b> – ${s.text}`
+                )).join("");
+
+                const progress = `<span class="year-progress" id="prog-${b.id}"></span>`;
+                const sub = b.side === "left" ? `${progress}${b.subtitle}` : `${b.subtitle}${progress}`;
+                const isCollapsed = !!collapsed[b.id];
+
+                const html = `
+                    <div class="branch ${isCollapsed ? "collapsed" : ""}" id="branch-${b.id}">
+                        <div class="cats">
+                            <div class="cat-row">
+                                <div class="leaves" id="leaves-${b.id}-goals">${goals}</div>
+                                <div class="cat" id="cat-${b.id}-goals" style="color:${b.color}">Mục tiêu</div>
+                            </div>
+                            <div class="cat-row">
+                                <div class="leaves" id="leaves-${b.id}-smart">${smart}</div>
+                                <div class="cat" id="cat-${b.id}-smart" style="color:${b.color}">SMART</div>
+                            </div>
+                        </div>
+                        <div class="year" id="year-${b.id}" style="color:${b.color}" onclick="toggleBranch('${b.id}')" title="Bấm để thu gọn / mở rộng">
+                            <svg class="doodle" viewBox="0 0 48 48">${DOODLES[b.doodle]}</svg>
+                            <div class="year-text">
+                                <span class="year-name">${b.year}</span><span class="year-period">${periodOf(b)}</span>
+                                <span class="year-sub">${sub}</span>
+                            </div>
+                            <span class="knob" id="knob-${b.id}">${isCollapsed ? "+" : "−"}</span>
+                        </div>
+                    </div>
+                `;
+                (b.side === "left" ? left : right).insertAdjacentHTML("beforeend", html);
+            });
+
+            updateProgress();
+            updateCollapseButton();
+        }
+
+        function toggleBranch(id) {
+            collapsed[id] = !collapsed[id];
+            applyCollapse([id], !collapsed[id]);
+        }
+
+        function toggleAllBranches() {
+            const anyOpen = MIND_DATA.some(b => !collapsed[b.id]);
+            const changed = MIND_DATA.filter(b => !!collapsed[b.id] !== anyOpen).map(b => b.id);
+            MIND_DATA.forEach(b => { collapsed[b.id] = anyOpen; });
+            applyCollapse(changed, !anyOpen);
+        }
+
+        function applyCollapse(ids, expanding) {
+            MIND_DATA.forEach(b => {
+                document.getElementById(`branch-${b.id}`).classList.toggle("collapsed", !!collapsed[b.id]);
+                document.getElementById(`knob-${b.id}`).textContent = collapsed[b.id] ? "+" : "−";
+            });
+            writeStore(COLLAPSE_KEY, collapsed);
+            updateCollapseButton();
+            syncSizer();
+            drawBranches({ anim: expanding && !REDUCED_MOTION ? ids : null });
+        }
+
+        function updateCollapseButton() {
+            const anyOpen = MIND_DATA.some(b => !collapsed[b.id]);
+            document.getElementById("collapse-all-btn").textContent = anyOpen ? "Thu gọn hết" : "Mở hết";
+        }
+
+        function replayIntro() {
+            document.getElementById("search-input").value = "";
+            handleSearch();
+            drawBranches({ anim: REDUCED_MOTION ? null : "all" });
+        }
+
+        function boxIn(el, root) {
+            let x = 0;
+            let y = 0;
+            for (let e = el; e && e !== root; e = e.offsetParent) {
+                x += e.offsetLeft;
+                y += e.offsetTop;
+            }
+            return { left: x, right: x + el.offsetWidth, top: y, bottom: y + el.offsetHeight, cy: y + el.offsetHeight / 2 };
+        }
+
+        function wobble(seed) {
+            const v = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+            return (v - Math.floor(v)) * 2 - 1;
+        }
+
+        function taperPath(x0, y0, x1, y1, w0, w1, seed) {
+            const dx = (x1 - x0) * 0.5;
+            const j = wobble(seed) * 8;
+            const c1x = x0 + dx, c1y = y0 + j;
+            const c2x = x1 - dx, c2y = y1 - j;
+            const a = w0 * 0.8 / 2, b = w1 * 1.2 / 2;
+            return `M ${x0} ${y0 - w0 / 2} C ${c1x} ${c1y - a}, ${c2x} ${c2y - b}, ${x1} ${y1 - w1 / 2}
+                    L ${x1} ${y1 + w1 / 2} C ${c2x} ${c2y + b}, ${c1x} ${c1y + a}, ${x0} ${y0 + w0 / 2} Z`;
+        }
+
+        function pop(el, delay) {
+            el.classList.remove("pop");
+            void el.offsetWidth;
+            el.style.animationDelay = `${delay}s`;
+            el.classList.add("pop");
+            el.addEventListener("animationend", () => {
+                el.classList.remove("pop");
+                el.style.animationDelay = "";
+            }, { once: true });
+        }
+
+        function drawBranches(opts = {}) {
+            const svg = document.getElementById("branches");
+            const sheet = document.getElementById("sheet");
+            const hub = document.getElementById("hub");
+            const all = opts.anim === "all";
+            const animIds = all ? null : (opts.anim || []);
+            const parts = [];
+            const pops = [];
+            const h = boxIn(hub, sheet);
+            let seed = 1;
+
+            if (all) pops.push([hub, 0]);
+
+            const pathTag = (d, color, extra, cls, delay) => {
+                const anim = cls ? ` class="${cls}" style="animation-delay:${delay}s"` : "";
+                return `<path d="${d}" fill="${color}"${extra}${anim}/>`;
+            };
+
+            MIND_DATA.forEach((b, i) => {
+                const isLeft = b.side === "left";
+                const growCls = isLeft ? "grow-l" : "grow-r";
+                const animateBranch = all || animIds.includes(b.id);
+                const t = all
+                    ? { main: 0.3 + i * 0.08, cat: 0.9 + i * 0.08, leaf: 1.2 + i * 0.08 }
+                    : { main: 0, cat: 0, leaf: 0.25 };
+
+                const yEl = document.getElementById(`year-${b.id}`);
+                const y = boxIn(yEl, sheet);
+                const yLine = y.bottom - 2.5;
+                const hx = isLeft ? h.left + 24 : h.right - 24;
+                const yInner = isLeft ? y.right : y.left;
+                parts.push(pathTag(
+                    taperPath(hx, h.cy, yInner, yLine, 20, 5, seed++), b.color, "",
+                    all ? growCls : "", t.main
+                ));
+                if (all) pops.push([yEl, t.main + 0.4]);
+
+                const yOuter = isLeft ? y.left : y.right;
+                ["goals", "smart"].forEach((cat, k) => {
+                    const cEl = document.getElementById(`cat-${b.id}-${cat}`);
+                    if (!cEl.offsetParent) return;
+                    const c = boxIn(cEl, sheet);
+                    const cLine = c.bottom - 1.5;
+                    const cInner = isLeft ? c.right : c.left;
+                    const catDelay = t.cat + k * 0.1;
+                    parts.push(pathTag(
+                        taperPath(yOuter, yLine, cInner, cLine, 5, 3, seed++), b.color, "",
+                        animateBranch ? growCls : "", catDelay
+                    ));
+                    if (animateBranch) pops.push([cEl, catDelay + 0.25]);
+
+                    const cOuter = isLeft ? c.left : c.right;
+                    document.querySelectorAll(`#leaves-${b.id}-${cat} .leaf`).forEach((leafEl, j) => {
+                        const l = boxIn(leafEl, sheet);
+                        const lInner = isLeft ? l.right : l.left;
+                        const leafDelay = t.leaf + k * 0.15 + j * 0.03;
+                        parts.push(pathTag(
+                            taperPath(cOuter, cLine, lInner, l.bottom - 1, 3, 2, seed++), b.color, ` opacity="0.85"`,
+                            animateBranch ? growCls : "", leafDelay
+                        ));
+                        if (animateBranch) pops.push([leafEl, leafDelay + 0.2]);
+                    });
+                });
+            });
+
+            svg.innerHTML = parts.join("");
+            pops.forEach(([el, d]) => pop(el, d));
+        }
+
+        function syncSizer() {
+            const sheet = document.getElementById("sheet");
+            const sizer = document.getElementById("sizer");
+            sizer.style.width = sheet.offsetWidth * currentScale + "px";
+            sizer.style.height = sheet.offsetHeight * currentScale + "px";
+        }
+
+        function setScale(scale, anchor) {
+            const vp = document.getElementById("viewport");
+            const sheet = document.getElementById("sheet");
+            const prev = currentScale;
+            currentScale = Math.min(Math.max(MIN_SCALE, scale), MAX_SCALE);
+
+            const ax = anchor ? anchor.x : vp.clientWidth / 2;
+            const ay = anchor ? anchor.y : vp.clientHeight / 2;
+            const cx = (vp.scrollLeft + ax) / prev;
+            const cy = (vp.scrollTop + ay) / prev;
+
+            sheet.style.transform = `scale(${currentScale})`;
+            syncSizer();
+            vp.scrollLeft = cx * currentScale - ax;
+            vp.scrollTop = cy * currentScale - ay;
+            document.getElementById("zoom-text").textContent = Math.round(currentScale * 100) + "%";
+        }
+
+        function zoomBy(delta) {
+            setScale(Math.round((currentScale + delta) * 100) / 100);
+        }
+
+        function fitToScreen() {
+            const vp = document.getElementById("viewport");
+            const sheet = document.getElementById("sheet");
+            setScale(Math.min(1, Math.floor((vp.clientWidth - 16) / sheet.offsetWidth * 100) / 100));
+            vp.scrollLeft = 0;
+            vp.scrollTop = 0;
+        }
+
+        function setupPanAndZoom() {
+            const vp = document.getElementById("viewport");
+            let pan = null;
+
+            vp.addEventListener("mousedown", e => {
+                if (e.button !== 0 || e.target.closest(".leaf, .year")) return;
+                pan = { x: e.clientX, y: e.clientY, left: vp.scrollLeft, top: vp.scrollTop };
+                vp.classList.add("panning");
+                e.preventDefault();
+            });
+            window.addEventListener("mousemove", e => {
+                if (!pan) return;
+                vp.scrollLeft = pan.left - (e.clientX - pan.x);
+                vp.scrollTop = pan.top - (e.clientY - pan.y);
+            });
+            window.addEventListener("mouseup", () => {
+                pan = null;
+                vp.classList.remove("panning");
+            });
+            vp.addEventListener("wheel", e => {
+                if (!e.ctrlKey) return;
+                e.preventDefault();
+                const r = vp.getBoundingClientRect();
+                setScale(currentScale + (e.deltaY < 0 ? 0.08 : -0.08), { x: e.clientX - r.left, y: e.clientY - r.top });
+            }, { passive: false });
+        }
+
+        function normalize(s) {
+            return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d");
+        }
+
+        function handleSearch() {
+            const q = normalize(document.getElementById("search-input").value.trim());
+            let layoutChanged = false;
+
+            MIND_DATA.forEach(b => {
+                let hasHit = false;
+                document.querySelectorAll(`#branch-${b.id} .leaf`).forEach(n => {
+                    const hit = !!q && normalize(n.textContent).includes(q);
+                    hasHit = hasHit || hit;
+                    n.classList.toggle("match", hit);
+                    n.classList.toggle("dim", !!q && !hit);
+                });
+                const branch = document.getElementById(`branch-${b.id}`);
+                const peek = hasHit && !!collapsed[b.id];
+                if (branch.classList.contains("peek") !== peek) {
+                    branch.classList.toggle("peek", peek);
+                    layoutChanged = true;
+                }
+            });
+
+            if (layoutChanged) {
+                syncSizer();
+                drawBranches();
+            }
+        }
+    </script>
+</body>
+</html>
